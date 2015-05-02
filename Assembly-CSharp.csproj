@@ -46,11 +46,11 @@
 	</Reference>
   </ItemGroup>
   <ItemGroup>
-     <Compile Include="Assets\HeadController.cs" />
      <Compile Include="Assets\Scripts\CameraFollowPlayer.cs" />
-     <Compile Include="Assets\Scripts\JointCorrector.cs" />
+     <Compile Include="Assets\Scripts\HeadController.cs" />
      <Compile Include="Assets\Scripts\PlayerController.cs" />
      <Compile Include="Assets\Scripts\RearLegController.cs" />
+     <Compile Include="Assets\Scripts\TriggerNearFeature.cs" />
      <Compile Include="Assets\Scripts\TriggerNearGround.cs" />
      <Compile Include="Assets\Scripts\TriggerNearHook.cs" />
      <Compile Include="Assets\Scripts\TriggerOnHook.cs" />

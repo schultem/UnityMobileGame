@@ -6,6 +6,7 @@ public class RearLegController : MonoBehaviour {
 	public PlayerController parent_controller;
 	public float min_angle = 0.0f;
 	public float max_angle = 0.0f;
+	public float lerp_scale= 1.0f;
 	
 	float last_angle = 0.0f;
 
@@ -22,14 +23,9 @@ public class RearLegController : MonoBehaviour {
 		float angle = -Mathf.Atan2(vector.x, vector.y) * Mathf.Rad2Deg;
 		return angle<0 ? angle+=90 : angle-=90;
 	}
-	
-	void SetRotationToVector(Vector2 vector){
-		transform.rotation = new Quaternion(0,0,0,0);
-		transform.Rotate(Vector3.forward * VectorEulerAngle(vector));
-	}
 
 	void LerpRotationToVector(Vector2 vector){
-		float angle = Mathf.Clamp ( Mathf.Lerp(last_angle, VectorEulerAngle(vector), Time.deltaTime*5) , min_angle, max_angle) ;
+		float angle = Mathf.Clamp ( Mathf.Lerp(last_angle, VectorEulerAngle(vector), Time.deltaTime*lerp_scale) , min_angle, max_angle) ;
 		last_angle = angle;
 
 		transform.rotation = new Quaternion (0, 0, 0, 0);
