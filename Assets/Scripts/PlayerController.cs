@@ -8,6 +8,7 @@ public class PlayerController : MonoBehaviour {
 	public float roll_angular_drag = 0f;
 	public float max_air_angular_velocity = 0f;
 	public float max_air_velocity = 0f;
+	public float spin_torque = 0f;
 	public bool mirrored = false;
 	float _gy = 0;
 	public bool on_hook     = false;
@@ -57,8 +58,14 @@ public class PlayerController : MonoBehaviour {
 				Jump(main_camera.ScreenToWorldPoint(Input.mousePosition));
 			}
 			else{
-				rigid_body.AddTorque(-(main_camera.ScreenToWorldPoint(Input.mousePosition).x-transform.position.x));
+				rigid_body.AddTorque(-spin_torque*Mathf.Sign(main_camera.ScreenToWorldPoint(Input.mousePosition).x-transform.position.x));
 			}
+		}
+
+		if (animator.GetCurrentAnimatorStateInfo(0).IsName("hang_idle")){
+			children["SpriteTail"].gameObject.GetComponent<SpriteRenderer>().enabled = true;
+		}else{
+			children["SpriteTail"].gameObject.GetComponent<SpriteRenderer>().enabled = false;
 		}
 	}
 
@@ -96,7 +103,8 @@ public class PlayerController : MonoBehaviour {
 	void Jump(Vector3 world_jump_position){
 		float x_diff = world_jump_position.x-transform.position.x;
 		float y_diff = world_jump_position.y-transform.position.y;
-		float angle = Mathf.Atan2(y_diff+jump_offset_y,x_diff);
+		float y_offset = on_ground ? Mathf.Max(jump_offset_y,5.0f) : jump_offset_y;
+		float angle = Mathf.Atan2(y_diff+y_offset,x_diff);
 
 		if (angle != Mathf.PI/2) {
 			float speed = (rigid_body.mass+branch_rigid_body.mass)*Mathf.Sqrt(_gy*Mathf.Pow(x_diff,2)/(2*y_diff*Mathf.Pow(Mathf.Cos(angle),2)-x_diff*Mathf.Sin(2*angle)));
@@ -110,11 +118,12 @@ public class PlayerController : MonoBehaviour {
 				float end_angle   = VectorEulerAngle(new Vector2(rigid_body.velocity.x, (rigid_body.velocity.y+_gy*(x_diff/rigid_body.velocity.x))));
 				SetRotationToVector(rigid_body.velocity);
 				rigid_body.angularVelocity = (end_angle-start_angle)/(x_diff/rigid_body.velocity.x);
-				children["SpriteRearLeg"].gameObject.GetComponent<Animator>().SetTrigger("jump");
-			}else if (on_hook || on_branch) {
-				children["SpriteRearLeg"].gameObject.GetComponent<Animator>().SetTrigger("jump");
+			} else if (on_branch){
+				animator.SetTrigger("hang_jump");
+			}else if (on_hook) {
 				animator.SetTrigger("hang_jump");
 			}
+			children["SpriteRearLeg"].gameObject.GetComponent<Animator>().SetTrigger("jump");
 		}
 	}
 
@@ -209,7 +218,7 @@ public class PlayerController : MonoBehaviour {
 			branch_collider.enabled = false;
 		} else if (collider_name == "branch") {
 			branch_hinge.connectedAnchor = branch_hinge_connected_anchor_enabled;
-			rigid_body.angularDrag=5.0f;
+			rigid_body.angularDrag=3.0f;
 			hook_collider.enabled   = true;
 			ground_collider.enabled = false;
 			branch_collider.enabled = true;
