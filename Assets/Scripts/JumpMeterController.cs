@@ -5,6 +5,7 @@ using System.Linq;
 
 public class JumpMeterController : MonoBehaviour {
 	public GameController game_controller;
+	public GameObject jump_meter;
 	public GameObject jump_meter_counter_0;
 	public GameObject jump_meter_counter_1;
 	public GameObject jump_meter_counter_2;
@@ -40,6 +41,8 @@ public class JumpMeterController : MonoBehaviour {
 	int active_counters = 0;
 
 	void Start () {
+		Vector3 bottom_left_corner = Camera.main.ViewportToWorldPoint(new Vector3(0,0,Camera.main.nearClipPlane));
+		transform.position = new Vector3(bottom_left_corner.x+0.75f, bottom_left_corner.y+0.25f, transform.position.z);
 		InitCounters();
 	}
 
