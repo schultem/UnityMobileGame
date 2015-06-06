@@ -3,38 +3,37 @@ using System.Collections;
 using System.Collections.Generic;
 
 public class TriggerNearFeature : MonoBehaviour {
-	
+	public PlayerController player_controller;
 	List<GameObject> ground_features = new List<GameObject>();
 
 	void OnTriggerEnter2D(Collider2D other) {
-		GameObject go = other.gameObject;
 		if (other.CompareTag ("Ground")) {
-			if (!ground_features.Contains (go)) {
-				ground_features.Add (go);
+			if (!ground_features.Contains (other.gameObject)) {
+				ground_features.Add (other.gameObject);
 			}
-			transform.root.gameObject.SendMessage ("SetOnGround", true);
+			player_controller.SetOnGround(true);
 		} else if (other.CompareTag ("Hook")) {
-			transform.root.gameObject.SendMessage ("SetNearHook", true);
+			player_controller.SetNearHook(true);
 		} else if (other.CompareTag ("Branch")) {
-			transform.root.gameObject.SendMessage ("SetNearBranch", true);
+			player_controller.SetNearBranch(true);
 		}
 	}
 	
 	void OnTriggerExit2D(Collider2D other) {
-		if (other.CompareTag ("Ground")) {
+		if (other.CompareTag ("Ground") && ground_features.Contains(other.gameObject)) {
 			ground_features.Remove (other.gameObject);
 			if (ground_features.Count > 0) {
-				transform.root.gameObject.SendMessage ("SetOnGround", true);
+				player_controller.SetOnGround(true);
 			} else if (ground_features.Count == 0) {
-				transform.root.gameObject.SendMessage ("SetOnGround", false);
+				player_controller.SetOnGround(false);
 			} else {
 				ground_features = new List<GameObject> ();
-				transform.root.gameObject.SendMessage ("SetOnGround", false);
+				player_controller.SetOnGround(false);
 			}
 		} else if (other.CompareTag ("Hook")) {
-			transform.root.gameObject.SendMessage ("SetNearHook", false);
+			player_controller.SetNearHook(false);
 		} else if (other.CompareTag ("Branch")) {
-			transform.root.gameObject.SendMessage ("SetNearBranch", false);
+			player_controller.SetNearBranch(false);
 		}
 	}
 }

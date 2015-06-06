@@ -7,23 +7,8 @@ public class GameControllerTitle : GameController {
 		base.next_level = 1;
 		base.fade_plane.SetActive(true);
 		base.fade_renderer = fade_plane.GetComponent<Renderer>();
-		base.coroutine = base.FadeIn(true);
+		base.coroutine = base.FadeIn();
 		StartCoroutine(base.coroutine);
-	}
-
-	public override void Update () {
-		if (jumps <= 0 && !base.restarting_level) {
-			StopCoroutine(coroutine);
-			coroutine = FadeOut();
-			StartCoroutine(coroutine);
-			restarting_level = true;
-		}
-		if (jumps > 0 && restarting_level) {
-			StopCoroutine(coroutine);
-			coroutine = FadeIn(false);
-			StartCoroutine(coroutine);
-			restarting_level = false;
-		}
 	}
 
 	public override IEnumerator FadeOut() {
@@ -35,7 +20,7 @@ public class GameControllerTitle : GameController {
 			fade_renderer.material.color = new Color(fade_renderer.material.color.r, fade_renderer.material.color.g, fade_renderer.material.color.b, fadeValue);
 			yield return null;
 		}
-		Application.LoadLevel("level_"+base.next_level); 
+		Application.LoadLevel("level_"+base.next_level);
 		yield return null;
 	}
 }

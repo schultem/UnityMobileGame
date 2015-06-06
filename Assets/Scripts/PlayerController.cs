@@ -3,29 +3,32 @@ using System.Collections;
 using System.Collections.Generic;
 
 public class PlayerController : MonoBehaviour {
-
-	public float jump_offset_y = 0f;
-	public float roll_angular_drag = 0f;
-	public float max_air_angular_velocity = 0f;
-	public float max_velocity = 0f;
-	public float spin_torque = 0f;
-	public bool mirrored = false;
-	float _gy = 0;
-	public bool on_hook     = false;
-	public bool on_branch   = false;
-	public bool on_ground   = false;
-	public bool near_ground = false;
-	public bool near_branch = false;
-	public bool standing    = false;
-
 	public CircleCollider2D ground_collider;
 	public PolygonCollider2D hook_collider;
 	public CircleCollider2D branch_collider;
 	public HingeJoint2D branch_hinge;
 	public Rigidbody2D branch_rigid_body;
 	public GameController game_controller;
+
+	public float jump_offset_y = 0f;
+	public float roll_angular_drag = 0f;
+	public float max_air_angular_velocity = 0f;
+	public float max_velocity = 0f;
+	public float spin_torque = 0f;
+	public float tilt_speed = 5.0f;
+
+	[HideInInspector] public bool mirrored    = false;
+	[HideInInspector] public bool on_hook     = false;
+	[HideInInspector] public bool on_branch   = false;
+	[HideInInspector] public bool on_ground   = false;
+	[HideInInspector] public bool near_ground = false;
+	[HideInInspector] public bool near_branch = false;
+	[HideInInspector] public bool standing    = false;
+	
+	float _gy = 0;
 	Vector2 branch_hinge_connected_anchor_enabled;
 	Vector2 branch_hinge_connected_anchor_disabled = new Vector2(0,0);
+
 	Camera main_camera;
 	Rigidbody2D rigid_body;
 	Animator animator;
@@ -51,29 +54,24 @@ public class PlayerController : MonoBehaviour {
 
 		SetCollider("hook");
 
-		animator = children["SpritePlayer"].gameObject.GetComponent<Animator>();
+		animator = children["sprite_body"].gameObject.GetComponent<Animator>();
 	}
 	
 	void Update() {
-		if (Input.GetMouseButtonUp(0) && game_controller.jumps>0) {
-			if ((on_hook || on_ground || on_branch)){
-				SetCollider("none");
-				Jump(main_camera.ScreenToWorldPoint(Input.mousePosition));
-				game_controller.jumps-=1;
-			}
-			else{
-				rigid_body.AddTorque(-spin_torque*Mathf.Sign(main_camera.ScreenToWorldPoint(Input.mousePosition).x-transform.position.x));
-			}
-		}
-
 		if (animator.GetCurrentAnimatorStateInfo(0).IsName("hang_idle")){
-			children["SpriteTail"].gameObject.GetComponent<SpriteRenderer>().enabled = true;
+			children["sprite_tail"].gameObject.GetComponent<SpriteRenderer>().enabled = true;
 		}else{
-			children["SpriteTail"].gameObject.GetComponent<SpriteRenderer>().enabled = false;
+			children["sprite_tail"].gameObject.GetComponent<SpriteRenderer>().enabled = false;
 		}
 	}
 
 	void FixedUpdate(){
+		if (on_ground) {
+			float tilt_angle = Input.acceleration.x;
+			tilt_angle = tilt_angle*tilt_speed*Time.deltaTime;
+			rigid_body.AddForce(new Vector3(tilt_angle, 0, 0));
+		}
+
 		if (!on_ground && !on_hook) {
 			if(rigid_body.angularVelocity > max_air_angular_velocity){
 				rigid_body.angularVelocity *= 0.9f;
@@ -83,6 +81,7 @@ public class PlayerController : MonoBehaviour {
 				rigid_body.angularVelocity *= 0.9f;
 			}
 		}
+
 		if(rigid_body.velocity.sqrMagnitude > max_velocity){
 			rigid_body.velocity *= 0.9f;
 		}
@@ -98,27 +97,39 @@ public class PlayerController : MonoBehaviour {
 		return toggle;
 	}
 
-	void Jump(Vector3 world_jump_position){
-		float x_diff = world_jump_position.x-transform.position.x;
-		float y_diff = world_jump_position.y-transform.position.y+0.1f;//0.1 to jump closer to the character's tail
-		float y_offset = on_ground ? Mathf.Max(jump_offset_y,5.0f) : jump_offset_y;
-		float angle = Mathf.Atan2(y_diff+y_offset,x_diff);
+	public void Disable(){
+		rigid_body.isKinematic = true;
+	}
 
-		if (angle != Mathf.PI/2) {
-			float speed = (rigid_body.mass+branch_rigid_body.mass)*Mathf.Sqrt(_gy*Mathf.Pow(x_diff,2)/(2*y_diff*Mathf.Pow(Mathf.Cos(angle),2)-x_diff*Mathf.Sin(2*angle)));
-			rigid_body.angularDrag=0;
-			rigid_body.velocity = new Vector2(speed*Mathf.Cos(angle),speed*Mathf.Sin(angle));
-			Mirror(x_diff);
-
-			float start_angle = VectorEulerAngle(rigid_body.velocity);
-			float end_angle   = VectorEulerAngle(new Vector2(rigid_body.velocity.x, (rigid_body.velocity.y+_gy*(x_diff/rigid_body.velocity.x))));
-			SetRotationToVector(rigid_body.velocity);
-			rigid_body.angularVelocity = (end_angle-start_angle)/(x_diff/rigid_body.velocity.x);
-
-			if (on_branch || on_hook) {
-				animator.SetTrigger("hang_jump");
+	public void Jump(){
+		if ((on_hook || on_ground || on_branch)){
+			SetCollider("none");
+			Vector3 world_jump_position = main_camera.ScreenToWorldPoint(Input.mousePosition);
+			float x_diff = world_jump_position.x-transform.position.x;
+			float y_diff = world_jump_position.y-transform.position.y+0.1f;//0.1 to jump closer to the character's tail
+			float y_offset = on_ground ? Mathf.Max(jump_offset_y,5.0f) : jump_offset_y;
+			float angle = Mathf.Atan2(y_diff+y_offset,x_diff);
+			
+			if (angle != Mathf.PI/2) {
+				float speed = (rigid_body.mass+branch_rigid_body.mass)*Mathf.Sqrt(_gy*Mathf.Pow(x_diff,2)/(2*y_diff*Mathf.Pow(Mathf.Cos(angle),2)-x_diff*Mathf.Sin(2*angle)));
+				rigid_body.angularDrag=0;
+				rigid_body.velocity = new Vector2(speed*Mathf.Cos(angle),speed*Mathf.Sin(angle));
+				Mirror(x_diff);
+				
+				float start_angle = VectorEulerAngle(rigid_body.velocity);
+				float end_angle   = VectorEulerAngle(new Vector2(rigid_body.velocity.x, (rigid_body.velocity.y+_gy*(x_diff/rigid_body.velocity.x))));
+				SetRotationToVector(rigid_body.velocity);
+				rigid_body.angularVelocity = (end_angle-start_angle)/(x_diff/rigid_body.velocity.x);
+				
+				if (on_branch || on_hook) {
+					animator.SetTrigger("hang_jump");
+				}
+				children["sprite_rear_leg"].gameObject.GetComponent<Animator>().SetTrigger("jump");
 			}
-			children["SpriteRearLeg"].gameObject.GetComponent<Animator>().SetTrigger("jump");
+
+			game_controller.jumps-=1;
+		}else{
+			rigid_body.AddTorque(-spin_torque*Mathf.Sign(main_camera.ScreenToWorldPoint(Input.mousePosition).x-transform.position.x));
 		}
 	}
 
@@ -132,7 +143,7 @@ public class PlayerController : MonoBehaviour {
 		transform.Rotate (Vector3.forward * VectorEulerAngle(vector));
 	}
 
-	void SetOnHook(bool _on_hook) {
+	public void SetOnHook(bool _on_hook) {
 		if (_on_hook && hook_collider.enabled) {
 			hook_collider.enabled = false;
 			hook_collider.sharedMaterial.friction = 0.01f;
@@ -141,14 +152,14 @@ public class PlayerController : MonoBehaviour {
 		on_hook = _on_hook;
 	}
 
-	void SetOnBranch(bool _on_branch) {
+	public void SetOnBranch(bool _on_branch) {
 		on_branch = _on_branch;
 	}
 
-	void SetNearHook(bool near_hook) {
+	public void SetNearHook(bool near_hook) {
 		if (near_hook) {
 			ResetOnGround();
-			children["TriggerNearGround"].gameObject.GetComponent<TriggerNearGround>().Reset();
+			children["trigger_near_ground"].gameObject.GetComponent<TriggerNearGround>().Reset();
 			SetNearGround(false);
 
 		} else {
@@ -158,10 +169,10 @@ public class PlayerController : MonoBehaviour {
 		}
 	}
 
-	void SetNearBranch(bool _near_branch) {
+	public void SetNearBranch(bool _near_branch) {
 		if (_near_branch) {
 			ResetOnGround ();
-			children["TriggerNearGround"].gameObject.GetComponent<TriggerNearGround>().Reset();
+			children["trigger_near_ground"].gameObject.GetComponent<TriggerNearGround>().Reset();
 			SetNearGround (false);
 
 			SetCollider("branch");
@@ -172,23 +183,23 @@ public class PlayerController : MonoBehaviour {
 		near_branch = _near_branch;
 	}
 
-	void SetNearGround(bool _near_ground) {
-		if (_near_ground) {
-			children["SpriteRearLeg"].gameObject.GetComponent<SpriteRenderer>().enabled = false;
-			children["SpriteHead"].gameObject.GetComponent<SpriteRenderer>().enabled = false;
+	public void SetNearGround(bool _near_ground) {
+		near_ground = _near_ground;
+		if (near_ground) {
+			children["sprite_rear_leg"].gameObject.GetComponent<SpriteRenderer>().enabled = false;
+			children["sprite_head"].gameObject.GetComponent<SpriteRenderer>().enabled = false;
 			SetCollider("ground");
 			rigid_body.angularDrag = roll_angular_drag;
 		} else {
-			children["SpriteRearLeg"].gameObject.GetComponent<SpriteRenderer>().enabled = true;
-			children["SpriteHead"].gameObject.GetComponent<SpriteRenderer>().enabled = true;
+			children["sprite_rear_leg"].gameObject.GetComponent<SpriteRenderer>().enabled = true;
+			children["sprite_head"].gameObject.GetComponent<SpriteRenderer>().enabled = true;
 			SetCollider("hook");
 			rigid_body.angularDrag = 0;
 		}
-		animator.SetBool ("near_ground",_near_ground);
-		near_ground = _near_ground;
+		animator.SetBool ("near_ground",near_ground);
 	}
 
-	void SetOnGround(bool _on_ground){
+	public void SetOnGround(bool _on_ground){
 		animator.SetBool ("on_ground",_on_ground);
 		on_ground = _on_ground;
 	}
